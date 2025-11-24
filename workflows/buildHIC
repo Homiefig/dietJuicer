@@ -40,22 +40,22 @@ for key in groups:
 ##### Define rules #####
 rule all:
     input:
-        expand('output/{group}/{group}_norm{ext}', group=groups, ext=['_done.txt', '30_done.txt'])
+	expand('output/{group}/{group}_norm{ext}', group=groups, ext=['_done.txt', '30_done.txt'])
 
 ## Merge all merged_nodups.txt files found in mergeList
 rule mergedNoDups:
     input:
-        lambda wildcards: mergNoDups[wildcards.group]
+	lambda wildcards: mergNoDups[wildcards.group]
     output:
-        merged_nodups = 'output/{group}/{group}_merged_nodups.txt.gz',
+	merged_nodups = 'output/{group}/{group}_merged_nodups.txt.gz',
         done = 'output/{group}/{group}_mergedNoDups_done.txt'
     log:
         'output/{group}/logs/{group}_merged_nodups.err'
     benchmark:
-        'output/{group}/benchmarks/{group}_merged_nodups.tsv'
+	'output/{group}/benchmarks/{group}_merged_nodups.tsv'
     threads: 8
     shell:
-        """
+	"""
         module load pigz
         tmp_dir=$(mktemp -d -p $PWD)
         cmd="sort --parallel={threads} -T $tmp_dir -m -k2,2d -k6,6d "
@@ -68,24 +68,28 @@ rule mergedNoDups:
 ## Create statistics files for MQ > 0
 rule inter:
     input:
-        inter = lambda wildcards: int1[wildcards.group],
+	inter = lambda wildcards: int1[wildcards.group],
         merged_nodups = rules.mergedNoDups.output.merged_nodups,
         merged_nodups_done = rules.mergedNoDups.output.done
     output:
-        inter = 'output/{group}/{group}_inter.txt',
+	inter = 'output/{group}/{group}_inter.txt',
         hists = 'output/{group}/{group}_inter_hists.m',
         done = 'output/{group}/{group}_inter_done.txt'
     log:
         err = 'output/{group}/logs/{group}_inter.err'
     benchmark:
-        'output/{group}/benchmarks/{group}_inter.tsv'
+	'output/{group}/benchmarks/{group}_inter.tsv'
     params:
-        ligation = config['ligation'],
+	ligation = config['ligation'],
         site_file = config['site_file']
     threads: 1
     shell:
-        """
-        awk -f ./scripts/makemega_addstats.awk {input.inter} > {output.inter} 2> {log.err}
+	"""
+        tmp_files=""
+        for f in {input.inter}; do
+            tmp_files="$tmp_files <(strings $f)"
+        done
+        eval "awk -f ./scripts/makemega_addstats.awk $tmp_files" > {output.inter} 2> {log.err}
         gunzip -c {input.merged_nodups} | ./scripts/statistics.pl -q 1 -o {output.inter} -s {params.site_file} 2>> {log.err}
         touch {output.done}
         """
@@ -93,24 +97,28 @@ rule inter:
 ## Create statistics files for MP > 30
 rule inter30:
     input:
-        inter30 = lambda wildcards: int30[wildcards.group],
+	inter30 = lambda wildcards: int30[wildcards.group],
         merged_nodups = rules.mergedNoDups.output.merged_nodups,
         merged_nodups_done = rules.mergedNoDups.output.done
     output:
-        inter30 = 'output/{group}/{group}_inter_30.txt',
+	inter30 = 'output/{group}/{group}_inter_30.txt',
         hists30 = 'output/{group}/{group}_inter_30_hists.m',
         done = 'output/{group}/{group}_inter_done.txt'
     log:
         err = 'output/{group}/logs/{group}_inter30.err'
     benchmark:
-        'output/{group}/benchmarks/{group}_inter30.tsv'
+	'output/{group}/benchmarks/{group}_inter30.tsv'
     params:
-        ligation = config['ligation'],
+	ligation = config['ligation'],
         site_file = config['site_file']
     threads: 1
     shell:
-        """
-        awk -f ./scripts/makemega_addstats.awk {input.inter30} > {output.inter30} 2> {log.err}
+	"""
+        tmp_files=""
+        for f in {input.inter30}; do
+            tmp_files="$tmp_files <(strings $f)"
+        done
+        eval "awk -f ./scripts/makemega_addstats.awk $tmp_files" > {output.inter30} 2> {log.err}
         gunzip -c {input.merged_nodups} | ./scripts/statistics.pl -q 30 -o {output.inter30} -s {params.site_file} 2>> {log.err}
         touch {output.done}
         """
@@ -118,24 +126,24 @@ rule inter30:
 ## Create Hi-C maps file for MQ > 0
 rule hic:
     input:
-        inter = rules.inter.output.inter,
+	inter = rules.inter.output.inter,
         inter_done = rules.inter.output.done,
         hists = rules.inter.output.hists,
         merged_nodups = rules.mergedNoDups.output.merged_nodups,
         merged_nodups_done = rules.mergedNoDups.output.done
     output:
-        hic = 'output/{group}/{group}_inter.hic'
+	hic = 'output/{group}/{group}_inter.hic'
     log:
         err = 'output/{group}/logs/{group}_hic.err',
         out = 'output/{group}/logs/{group}_hic.out'
     benchmark:
-        'output/{group}/benchmarks/{group}_hic.tsv'
+	'output/{group}/benchmarks/{group}_hic.tsv'
     params:
-        chromSizes = config['chromSizes'],
+	chromSizes = config['chromSizes'],
         javaMem = config['javaMem']
     threads: 1
     shell:
-        """
+	"""
         export IBM_JAVA_OPTIONS="-Xmx{params.javaMem}m -Xgcthreads1"
         java -Djava.awt.headless=true -Djava.library.path=/lib64 -Xms{params.javaMem}m -Xmx{params.javaMem}m -jar ./scripts/juicer_tools.jar pre -n -s {input.inter} -g {input.hists} -q 1 {input.merged_nodups} {output.hic} {params.chromSizes} 1> {log.out} 2> {log.err}
         """
@@ -143,66 +151,67 @@ rule hic:
 ## Create Hi-C maps file for MQ > 30
 rule hic30:
     input:
-        inter30 = rules.inter30.output.inter30,
+	inter30 = rules.inter30.output.inter30,
         inter30_done = rules.inter30.output.done,
         hists30 = rules.inter30.output.hists30,
         merged_nodups = rules.mergedNoDups.output.merged_nodups,
         merged_nodups_done = rules.mergedNoDups.output.done
     output:
-        hic30 = 'output/{group}/{group}_inter_30.hic'
+	hic30 = 'output/{group}/{group}_inter_30.hic'
     log:
         err = 'output/{group}/logs/{group}_hic30.err',
         out = 'output/{group}/logs/{group}_hic30.out'
     benchmark:
-        'output/{group}/benchmarks/{group}_hic30.tsv'
+	'output/{group}/benchmarks/{group}_hic30.tsv'
     params:
-        chromSizes = config['chromSizes'],
+	chromSizes = config['chromSizes'],
         javaMem = config['javaMem']
     threads: 1
     shell:
-        """
+	"""
         export IBM_JAVA_OPTIONS="-Xmx{params.javaMem}m -Xgcthreads1"
         java -Djava.awt.headless=true -Djava.library.path=/lib64 -Xms{params.javaMem}m -Xmx{params.javaMem}m -jar ./scripts/juicer_tools.jar pre -n -s {input.inter30} -g {input.hists30} -q 30 {input.merged_nodups} {output.hic30} {params.chromSizes} 1> {log.out} 2> {log.err}
         """
-	
+        
 ## Create normalizations for MQ > 0
 rule norm:
     input:
-        hic = rules.hic.output.hic
+	hic = rules.hic.output.hic
     output:
-        done = 'output/{group}/{group}_norm_done.txt'
+	done = 'output/{group}/{group}_norm_done.txt'
     log:
         err = 'output/{group}/logs/{group}_norm.err',
         out = 'output/{group}/logs/{group}_norm.out'
     benchmark:
-        'output/{group}/benchmarks/{group}_norm.tsv'
+	'output/{group}/benchmarks/{group}_norm.tsv'
     params:
-        javaMem = config['javaMem']
+	javaMem = config['javaMem']
     threads: 1
     shell:
-        """
+	"""
         export IBM_JAVA_OPTIONS="-Xmx{params.javaMem}m -Xgcthreads1"
         java -Djava.awt.headless=true -Djava.library.path=/lib64 -Xms{params.javaMem}m -Xmx{params.javaMem}m -jar ./scripts/juicer_tools.jar addNorm {input.hic} 1> {log.out} 2> {log.err}
         touch {output.done}
         """
-	
+        
 ## Create normalizations for MQ > 30
 rule norm30:
     input:
-        hic30 = rules.hic30.output.hic30
+	hic30 = rules.hic30.output.hic30
     output:
-        done = 'output/{group}/{group}_norm30_done.txt'
+	done = 'output/{group}/{group}_norm30_done.txt'
     log:
         err = 'output/{group}/logs/{group}_norm30.err',
         out = 'output/{group}/logs/{group}_norm30.out'
     benchmark:
-        'output/{group}/benchmarks/{group}_norm.tsv'
+	'output/{group}/benchmarks/{group}_norm.tsv'
     params:
-        javaMem = config['javaMem']
+	javaMem = config['javaMem']
     threads: 1
     shell:
-        """
+	"""
         export IBM_JAVA_OPTIONS="-Xmx{params.javaMem}m -Xgcthreads1"
         java -Djava.awt.headless=true -Djava.library.path=/lib64 -Xms{params.javaMem}m -Xmx{params.javaMem}m -jar ./scripts/juicer_tools.jar addNorm {input.hic30} 1> {log.out} 2> {log.err}
         touch {output.done}
         """
+
