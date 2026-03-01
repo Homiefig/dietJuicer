@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -101,6 +102,9 @@ rule align:
         fasta = config['fasta']
     benchmark: 
         "output/{group}/benchmarks/{group}_align_split{splitName}.tsv"
+    resources:
+        mem_mb_per_cpu = "16G",
+        cpus_per_task = 8
     shell:
         "module load bwa; "
         "bwa mem -SP5M -t {threads} {params.fasta} {input.R1} {input.R2} > {output.sam} 2> {log.err}"
@@ -169,6 +173,9 @@ rule sort:
     shadow: "minimal"
     benchmark:
         'output/{group}/benchmarks/{group}_sort_split{splitName}.tsv'
+    resources:
+        mem_mb_per_cpu = "8G",
+        cpus_per_task = 8
     shell:
         """
         tmp_dir=$(mktemp -d -p $PWD)
@@ -187,6 +194,9 @@ rule mergedSort:
     shadow: "minimal"
     benchmark:
         'output/{group}/benchmarks/{group}_mergedSort.tsv'
+    resources:
+        mem_mb_per_cpu = "8G",
+        cpus_per_task = 8
     shell:
         """
         tmp_dir=$(mktemp -d -p $PWD)
@@ -290,6 +300,9 @@ rule hic:
         chromSizes = config['chromSizes'],
         javaMem = config['javaMem']
     threads: 1
+    resources:
+        mem_mb_per_cpu = "260G",
+        time = 10080
     shell:
         """
         export IBM_JAVA_OPTIONS="-Xmx{params.javaMem}m -Xgcthreads1"
@@ -313,6 +326,9 @@ rule hic30:
         chromSizes = config['chromSizes'],
         javaMem = config['javaMem']
     threads: 1
+    resources:
+        mem_mb_per_cpu = "260G",
+        time = 10080
     shell:
         """
         export IBM_JAVA_OPTIONS="-Xmx{params.javaMem}m -Xgcthreads1"
@@ -332,13 +348,16 @@ rule norm:
     params:
         javaMem = config['javaMem']
     threads: 1
+    resources:
+        mem_mb_per_cpu = "260G",
+        time = 10080
     shell:
         """
         export IBM_JAVA_OPTIONS="-Xmx{params.javaMem}m -Xgcthreads1"
         java -Djava.awt.headless=true -Djava.library.path=/lib64 -Xms{params.javaMem}m -Xmx{params.javaMem}m -jar ./scripts/juicer_tools.jar addNorm {input.hic} 1> {log.out} 2> {log.err}
         touch {output.done}
         """
-	
+
 rule norm30:
     input:
         hic30 = rules.hic30.output.hic30
@@ -352,6 +371,9 @@ rule norm30:
     params:
         javaMem = config['javaMem']
     threads: 1
+    resources:
+        mem_mb_per_cpu = "260G",
+        time = 10080
     shell:
         """
         export IBM_JAVA_OPTIONS="-Xmx{params.javaMem}m -Xgcthreads1"
