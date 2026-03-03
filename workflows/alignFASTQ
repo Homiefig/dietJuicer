@@ -75,7 +75,6 @@ rule countLigations:
         R1 = lambda wildcards: ['output/{group}/splitsR1/{splitName}_R1.fastq.gz'.format(group=wildcards.group, splitName=wildcards.splitName)],
         R2 = lambda wildcards: ['output/{group}/splitsR2/{splitName}_R2.fastq.gz'.format(group=wildcards.group, splitName=wildcards.splitName)]
     output:
-        temp = temp('output/{group}/{group}_countLigations_split{splitName}_temp'),
         res = temp('output/{group}/{group}_countLigations_split{splitName}_norm.txt.res.txt'),
         linecount = temp('output/{group}/{group}_countLigations_split{splitName}_linecount.txt')
     log:
@@ -87,7 +86,7 @@ rule countLigations:
     benchmark: 
         'output/{group}/benchmarks/{group}_countLigations_split{splitName}.tsv'
     shell:
-        "R1={input.R1} R2={input.R2} ligation={params.ligation} temp={output.temp} res={output.res} linecount={output.linecount} sh scripts/countLigations.sh 2> {log.err} 1> {log.out}"
+        "R1={input.R1} R2={input.R2} ligation={params.ligation} res={output.res} linecount={output.linecount} sh scripts/countLigations.sh 2> {log.err} 1> {log.out}"
 
 rule align:
     input:
